@@ -2,8 +2,7 @@ import AppKit
 import vanilla
 import math
 
-from fontTools.pens.pointPen import ReverseContourPointPen, AbstractPointPen
-from fontTools.pens.transformPen import TransformPointPen
+from fontTools.pens.pointPen import ReverseContourPointPen
 from fontTools.misc.transform import DecomposedTransform, Identity
 
 from mojo.events import BaseEventTool, installTool
@@ -82,7 +81,7 @@ def _roundPoint(x, y):
     return int(round(x)), int(round(y))
 
 
-class DrawStarShapeTool(BaseEventTool):
+class DrawStarTool(BaseEventTool):
 
     strokeColor = (1, 0, 0, 1)
     reversedStrokColor = (0, 0, 1, 1)
@@ -334,4 +333,4 @@ class DrawStarShapeTool(BaseEventTool):
 
 
 # install the tool!!
-installTool(DrawStarShapeTool())
+installTool(DrawStarTool())
