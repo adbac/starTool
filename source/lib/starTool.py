@@ -1,7 +1,10 @@
 import AppKit
 import vanilla
+import math
 
-from fontTools.pens.pointPen import ReverseContourPointPen
+from fontTools.pens.pointPen import ReverseContourPointPen, AbstractPointPen
+from fontTools.pens.transformPen import TransformPointPen
+from fontTools.misc.transform import DecomposedTransform, Identity
 
 from mojo.events import BaseEventTool, installTool
 from mojo.extensions import ExtensionBundle
@@ -15,7 +18,7 @@ _cursorStar = CreateCursor(shapeBundle.get("cursorStar"), hotSpot=(6, 6))
 toolbarIcon = shapeBundle.get("toolbarIcon")
 
 
-class GeometricShapesWindow(object):
+class StarShapesWindow(object):
     """
     The Modal window that allows numbers input to draw star shapes.
     """
@@ -24,26 +27,25 @@ class GeometricShapesWindow(object):
         self.glyph = glyph
         self.callback = callback
 
-        self.w = vanilla.Sheet((200, 160), parentWindow=AppKit.NSApp().mainWindow())
+        self.w = vanilla.Sheet((200, 204), parentWindow=AppKit.NSApp().mainWindow())
 
-        self.w.infoText = vanilla.TextBox((10, 13, -10, 22), "Add shape:")
+        self.w.infoText = vanilla.TextBox((10, 13, -10, 22), "Add star:")
         # add some text boxes (labels)
         self.w.xText = vanilla.TextBox((10, 43, 100, 22), "x")
         self.w.yText = vanilla.TextBox((10, 73, 100, 22), "y")
         self.w.wText = vanilla.TextBox((100, 43, 100, 22), "w")
         self.w.hText = vanilla.TextBox((100, 73, 100, 22), "h")
+        self.w.pointsText = vanilla.TextBox((10, 103, 100, 22), "Points")
+        self.w.intRadiusText = vanilla.TextBox((10, 133, 100, 22), "Inner radius")
+        self.w.percentLegend = vanilla.TextBox((172, 133, 100, 22), "%")
 
         # adding input boxes
         self.w.xInput = vanilla.EditText((30, 40, 50, 22), "%i" % x)
         self.w.yInput = vanilla.EditText((30, 70, 50, 22), "%i" % y)
         self.w.wInput = vanilla.EditText((120, 40, 50, 22))
         self.w.hInput = vanilla.EditText((120, 70, 50, 22))
-
-        # a radio group with shape choices
-        # (RadioGroup is not included in dialogKit, this is a vanilla object)
-        self.shapes = ["rect", "oval"]
-        self.w.shape = vanilla.RadioGroup((10, 100, -10, 22), self.shapes, isVertical=False)
-        self.w.shape.set(0)
+        self.w.pointsInput = vanilla.EditText((120, 100, 50, 22), "5")
+        self.w.intRadiusInput = vanilla.EditText((120, 130, 50, 22), "50")
 
         self.w.okButton = vanilla.Button((-70, -30, -15, 20), "OK", callback=self.okCallback, sizeStyle="small")
         self.w.setDefaultButton(self.w.okButton)
@@ -56,20 +58,20 @@ class GeometricShapesWindow(object):
 
     def okCallback(self, sender):
         # draw the shape in the glyph
-        # get the shape from the radio group
-        shape = self.shapes[self.w.shape.get()]
         # try to get some integers from the input fields
         try:
             x = int(self.w.xInput.get())
             y = int(self.w.yInput.get())
             w = int(self.w.wInput.get())
             h = int(self.w.hInput.get())
+            nbPoints = int(self.w.pointsInput.get())
+            innerRadius = int(self.w.intRadiusInput.get())
         # if this fails just do nothing and print a tiny traceback
         except Exception:
             print("A number is required!")
             return
         # draw the shape with the callback given on init
-        self.callback(shape, (x, y, w, h), self.glyph)
+        self.callback((x, y, w, h), nbPoints, innerRadius, self.glyph)
 
     def cancelCallback(self, sender):
         # do nothing :)
@@ -90,13 +92,14 @@ class DrawStarShapeTool(BaseEventTool):
         # use this to initialize some attributes
         self.minPoint = None
         self.maxPoint = None
-        self.shape = "rect"
         self.origin = "corner"
         self.moveShapeShift = None
         self.shouldReverse = False
         self.shouldUseCubic = True
+        self.nbPoints = 5
+        self.innerRadius = 50
 
-        drawingLayer = self.extensionContainer("com.typemytype.shapeTool")
+        drawingLayer = self.extensionContainer("com.adbac.starTool")
         self.pathLayer = drawingLayer.appendPathSublayer(
             fillColor=None,
             strokeColor=self.strokeColor,
@@ -150,10 +153,46 @@ class DrawStarShapeTool(BaseEventTool):
 
         return x, y, w, h
 
-    def drawShapeWithRectInGlyph(self, shape, rect, glyph):
+    def getStarPoints(self, rect, nbPoints, innerRadius, glyph):
+        points = []
+
+        x, y, w, h = rect
+
+        if w != h:
+            minSide = min(w, h)
+            outerRadius = minSide / 2
+            transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h if h != 0 else w, scaleY = 1 if minSide == h else h / w if w != 0 else h, tCenterX = x + w/2, tCenterY = y + h/2).toTransform()
+        else:
+            transformation = Identity
+            outerRadius = w / 2
+
+        innerRadius = outerRadius * (innerRadius / 100)
+
+        # Calculate coordinates of the points on the inner and outer circle
+        points_x_inner = []
+        points_y_inner = []
+        points_x_outer = []
+        points_y_outer = []
+
+        # draw a star in the glyph using the pen
+        for i in range(self.nbPoints):
+            angle = 2 * math.pi * i / self.nbPoints
+            points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
+            points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
+            angle2 = angle + math.pi / self.nbPoints
+            points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
+            points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
+
+        for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
+            points.append(_roundPoint(*transformation.transformPoint((x_in, y_in))))
+            points.append(_roundPoint(*transformation.transformPoint((x_out, y_out))))
+
+        return points
+
+    def drawStarWithRectInGlyph(self, rect, nbPoints, innerRadius, glyph):
         # draw the shape into the glyph
         # tell the glyph something is going to happen (undo is going to be prepared)
-        glyph.prepareUndo("Drawing Shapes")
+        glyph.prepareUndo("Drawing Star")
 
         # get the pen to draw with
         pen = glyph.getPointPen()
@@ -163,46 +202,36 @@ class DrawStarShapeTool(BaseEventTool):
 
         x, y, w, h = rect
 
-        # draw a rectangle in the glyph using the pen
-        if shape == "rect":
-            pen.beginPath()
-            pen.addPoint(_roundPoint(x, y), "line")
-            pen.addPoint(_roundPoint(x + w, y), "line")
-            pen.addPoint(_roundPoint(x + w, y + h), "line")
-            pen.addPoint(_roundPoint(x, y + h), "line")
+        if w != h:
+            minSide = min(w, h)
+            outerRadius = minSide / 2
+            transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h, scaleY = 1 if minSide == h else h / w, tCenterX = x + w/2, tCenterY = y + h/2)
+            pen = TransformPointPen(pen, tuple(transformation.toTransform()))
+        else:
+            outerRadius = w / 2
 
-            pen.endPath()
+        innerRadius = outerRadius * (innerRadius / 100)
 
-        # draw an oval in the glyph using the pen
-        elif shape == "oval":
-            hw = w / 2.
-            hh = h / 2.
+        # Calculate coordinates of the points on the inner and outer circle
+        points_x_inner = []
+        points_y_inner = []
+        points_x_outer = []
+        points_y_outer = []
 
-            if self.shouldUseCubic:
-                r = .55
-                segmentType = "curve"
-            else:
-                r = .42
-                segmentType = "qcurve"
+        # draw a star in the glyph using the pen
+        for i in range(nbPoints):
+            angle = 2 * math.pi * i / nbPoints
+            points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
+            points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
+            angle2 = angle + math.pi / nbPoints
+            points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
+            points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
 
-            pen.beginPath()
-            pen.addPoint(_roundPoint(x + hw, y), segmentType, True)
-            pen.addPoint(_roundPoint(x + hw + hw * r, y))
-            pen.addPoint(_roundPoint(x + w, y + hh - hh * r))
-
-            pen.addPoint(_roundPoint(x + w, y + hh), segmentType, True)
-            pen.addPoint(_roundPoint(x + w, y + hh + hh * r))
-            pen.addPoint(_roundPoint(x + hw + hw * r, y + h))
-
-            pen.addPoint(_roundPoint(x + hw, y + h), segmentType, True)
-            pen.addPoint(_roundPoint(x + hw - hw * r, y + h))
-            pen.addPoint(_roundPoint(x, y + hh + hh * r))
-
-            pen.addPoint(_roundPoint(x, y + hh), segmentType, True)
-            pen.addPoint(_roundPoint(x, y + hh - hh * r))
-            pen.addPoint(_roundPoint(x + hw - hw * r, y))
-
-            pen.endPath()
+        pen.beginPath()
+        for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
+            pen.addPoint(_roundPoint(x_in, y_in), "line")
+            pen.addPoint(_roundPoint(x_out, y_out), "line")
+        pen.endPath()
 
         # tell the glyph you are done with your actions so it can handle the undo properly
         glyph.performUndo()
@@ -214,8 +243,8 @@ class DrawStarShapeTool(BaseEventTool):
         # on double click, pop up a dialog with input fields
         if clickCount == 2:
             # create and open dialog
-            GeometricShapesWindow(self.getGlyph(),
-                            callback=self.drawShapeWithRectInGlyph,
+            StarShapesWindow(self.getGlyph(),
+                            callback=self.drawStarWithRectInGlyph,
                             x=self.minPoint.x,
                             y=self.minPoint.y)
 
@@ -233,7 +262,7 @@ class DrawStarShapeTool(BaseEventTool):
     def mouseUp(self, point):
         # mouse up, if you have recorded the rect draw that into the glyph
         if self.minPoint and self.maxPoint:
-            self.drawShapeWithRectInGlyph(self.shape, self.getRect(), self.getGlyph())
+            self.drawStarWithRectInGlyph(self.getRect(), self.nbPoints, self.innerRadius, self.getGlyph())
         # reset the tool
         self.minPoint = None
         self.maxPoint = None
@@ -256,15 +285,26 @@ class DrawStarShapeTool(BaseEventTool):
                 settings = self.originLayer.getImageSettings()
                 settings["fillColor"] = self.strokeColor
                 self.originLayer.setImageSettings(settings)
+        # number of points +1 when up is down
+        if self.arrowKeysDown["up"]:
+            self.nbPoints += 1
+        # number of points -1 when down is down
+        if self.arrowKeysDown["down"]:
+            self.nbPoints = self.nbPoints - 1 if self.nbPoints > 2 else 2
+        # inner radius -1 when left is down
+        if self.arrowKeysDown["left"]:
+            self.innerRadius = self.innerRadius - 1 if self.innerRadius > 2 else 2
+        # inner radius +1 when right is down
+        if self.arrowKeysDown["right"]:
+            self.innerRadius += 1
+        # update layer
+        if self.arrowKeysDown:
+            self.updateLayer()
 
     def modifiersChanged(self):
         # is being called with modifiers changed (shift, alt, control, command)
-        self.shape = "rect"
         self.origin = "corner"
 
-        # change the shape when option is down
-        if self.optionDown:
-            self.shape = "oval"
         # change the origin when command is down
         if self.commandDown:
             self.origin = "center"
@@ -289,10 +329,37 @@ class DrawStarShapeTool(BaseEventTool):
         if self.isDragging() and self.minPoint and self.maxPoint:
             x, y, w, h = self.getRect()
             pen = self.pathLayer.getPen()
-            if self.shape == "rect":
-                pen.rect((x, y, w, h))
-            elif self.shape == "oval":
-                pen.oval((x, y, w, h))
+
+            if w != h:
+                minSide = min(w, h)
+                outerRadius = minSide / 2
+                transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h if h != 0 else w, scaleY = 1 if minSide == h else h / w if w != 0 else h, tCenterX = x + w/2, tCenterY = y + h/2).toTransform()
+            else:
+                transformation = Identity
+                outerRadius = w / 2
+
+            innerRadius = outerRadius * (self.innerRadius / 100)
+
+            # Calculate coordinates of the points on the inner and outer circle
+            points_x_inner = []
+            points_y_inner = []
+            points_x_outer = []
+            points_y_outer = []
+
+            # draw a star in the glyph using the pen
+            for i in range(self.nbPoints):
+                angle = 2 * math.pi * i / self.nbPoints
+                points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
+                points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
+                angle2 = angle + math.pi / self.nbPoints
+                points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
+                points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
+
+            pen.moveTo(transformation.transformPoint(([points_x_outer[-1], points_y_outer[-1]])))
+            for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
+                pen.lineTo(_roundPoint(*transformation.transformPoint((x_in, y_in))))
+                pen.lineTo(_roundPoint(*transformation.transformPoint((x_out, y_out))))
+            pen.closePath()
 
             if self.origin == "center":
                 self.originLayer.setPosition((x + w / 2, y + h / 2))
@@ -307,9 +374,14 @@ class DrawStarShapeTool(BaseEventTool):
         # returns the cursor
         return _cursorStar
 
+    # def getToolbarIcon(self):
+    #     # return the toolbar icon
+    #     return toolbarIcon
+
     def getToolbarIcon(self):
         # return the toolbar icon
-        return toolbarIcon
+        icon = NSImage.alloc().initWithContentsOfFile_("/Users/adrienbachelart/Documents/type-repos/_robofont/Scripts/Star Tool/toolbarIcon.pdf")
+        return icon
 
     def getToolbarTip(self):
         # return the toolbar tool tip
