@@ -1,0 +1,10 @@
+name: Star Tool
+developer: Adrien Bachelart
+developerURL: https://github.com/adbac
+launchAtStartUp: true
+mainScript: starTool.py
+version: '0.1'
+addToMenu: []
+html: true
+requiresVersionMajor: '4'
+requiresVersionMinor: '0'
