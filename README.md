@@ -1,4 +1,4 @@
-<img src="StarToolMechanicIcon.png" alt="drawing" width="64px"/>
+<img src="starToolMechanicIcon.png" alt="drawing" width="64px"/>
 
 Star Tool
 ==========
