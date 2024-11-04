@@ -10,3 +10,5 @@ jobs:
         uses: typemytype/roboFont-Extension-action@v0.1.0
         with:
           autotagging: true
+    permissions:
+      contents: write
