@@ -153,7 +153,7 @@ class DrawStarShapeTool(BaseEventTool):
 
         return x, y, w, h
 
-    def getStarPoints(self, rect, nbPoints, innerRadius, glyph):
+    def getStarPoints(self, rect, nbPoints, innerRadius):
         points = []
 
         x, y, w, h = rect
@@ -175,11 +175,11 @@ class DrawStarShapeTool(BaseEventTool):
         points_y_outer = []
 
         # draw a star in the glyph using the pen
-        for i in range(self.nbPoints):
-            angle = 2 * math.pi * i / self.nbPoints
+        for i in range(nbPoints):
+            angle = 2 * math.pi * i / nbPoints
             points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
             points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
-            angle2 = angle + math.pi / self.nbPoints
+            angle2 = angle + math.pi / nbPoints
             points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
             points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
 
@@ -200,37 +200,11 @@ class DrawStarShapeTool(BaseEventTool):
         if self.shouldReverse:
             pen = ReverseContourPointPen(pen)
 
-        x, y, w, h = rect
-
-        if w != h:
-            minSide = min(w, h)
-            outerRadius = minSide / 2
-            transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h, scaleY = 1 if minSide == h else h / w, tCenterX = x + w/2, tCenterY = y + h/2)
-            pen = TransformPointPen(pen, tuple(transformation.toTransform()))
-        else:
-            outerRadius = w / 2
-
-        innerRadius = outerRadius * (innerRadius / 100)
-
-        # Calculate coordinates of the points on the inner and outer circle
-        points_x_inner = []
-        points_y_inner = []
-        points_x_outer = []
-        points_y_outer = []
-
-        # draw a star in the glyph using the pen
-        for i in range(nbPoints):
-            angle = 2 * math.pi * i / nbPoints
-            points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
-            points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
-            angle2 = angle + math.pi / nbPoints
-            points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
-            points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
+        points = self.getStarPoints(rect, nbPoints, innerRadius)
 
         pen.beginPath()
-        for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
-            pen.addPoint(_roundPoint(x_in, y_in), "line")
-            pen.addPoint(_roundPoint(x_out, y_out), "line")
+        for p in points:
+            pen.addPoint(p, "line")
         pen.endPath()
 
         # tell the glyph you are done with your actions so it can handle the undo properly
@@ -330,35 +304,11 @@ class DrawStarShapeTool(BaseEventTool):
             x, y, w, h = self.getRect()
             pen = self.pathLayer.getPen()
 
-            if w != h:
-                minSide = min(w, h)
-                outerRadius = minSide / 2
-                transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h if h != 0 else w, scaleY = 1 if minSide == h else h / w if w != 0 else h, tCenterX = x + w/2, tCenterY = y + h/2).toTransform()
-            else:
-                transformation = Identity
-                outerRadius = w / 2
+            points = self.getStarPoints((x, y, w, h), self.nbPoints, self.innerRadius)
 
-            innerRadius = outerRadius * (self.innerRadius / 100)
-
-            # Calculate coordinates of the points on the inner and outer circle
-            points_x_inner = []
-            points_y_inner = []
-            points_x_outer = []
-            points_y_outer = []
-
-            # draw a star in the glyph using the pen
-            for i in range(self.nbPoints):
-                angle = 2 * math.pi * i / self.nbPoints
-                points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
-                points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
-                angle2 = angle + math.pi / self.nbPoints
-                points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
-                points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
-
-            pen.moveTo(transformation.transformPoint(([points_x_outer[-1], points_y_outer[-1]])))
-            for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
-                pen.lineTo(_roundPoint(*transformation.transformPoint((x_in, y_in))))
-                pen.lineTo(_roundPoint(*transformation.transformPoint((x_out, y_out))))
+            pen.moveTo(points[0])
+            for p in points:
+                pen.lineTo(p)
             pen.closePath()
 
             if self.origin == "center":
@@ -374,14 +324,9 @@ class DrawStarShapeTool(BaseEventTool):
         # returns the cursor
         return _cursorStar
 
-    # def getToolbarIcon(self):
-    #     # return the toolbar icon
-    #     return toolbarIcon
-
     def getToolbarIcon(self):
         # return the toolbar icon
-        icon = NSImage.alloc().initWithContentsOfFile_("/Users/adrienbachelart/Documents/type-repos/_robofont/Scripts/Star Tool/toolbarIcon.pdf")
-        return icon
+        return toolbarIcon
 
     def getToolbarTip(self):
         # return the toolbar tool tip
