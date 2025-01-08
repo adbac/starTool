@@ -10,7 +10,7 @@ An interactive tool to draw stars with given number of points and inner radius.
 Installation
 ------------
 
-Download and double-click the `.roboFontExt` file to install manually, or get it via [Mechanic2](http://robofontmechanic.com/).
+Download and double-click the `.roboFontExt` file in the Releases section to install manually, or get it via [Mechanic2](http://robofontmechanic.com/).
 
 When installed, StarTool becomes available from the Glyph Editor’s toolbar.
 
