@@ -7,3 +7,5 @@ __pycache__
 *.afdesign~lock~
 
 future.yml
+
+*.mechanic
