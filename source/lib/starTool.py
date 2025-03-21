@@ -1,12 +1,11 @@
-import AppKit
-import vanilla
 import math
 
-from fontTools.pens.pointPen import ReverseContourPointPen
+import ezui
 from fontTools.misc.transform import DecomposedTransform, Identity
-
+from fontTools.pens.pointPen import ReverseContourPointPen
 from mojo.events import BaseEventTool, installTool
 from mojo.extensions import ExtensionBundle
+from mojo.UI import CurrentGlyphWindow
 
 
 # collecting image data for building cursors and toolbar icons
@@ -17,54 +16,95 @@ _cursorStar = CreateCursor(shapeBundle.get("cursorStar"), hotSpot=(6, 6))
 toolbarIcon = shapeBundle.get("toolbarIcon")
 
 
-class StarShapesWindow(object):
+class StarShapeSheet(ezui.WindowController):
     """
-    The Modal window that allows numbers input to draw star shapes.
+    The sheet that allows numbers input to draw star shapes.
     """
 
-    def __init__(self, glyph, callback, x, y):
+    def build(self, parent, glyph, callback, x, y):
         self.glyph = glyph
         self.callback = callback
 
-        self.w = vanilla.Sheet((200, 204), parentWindow=AppKit.NSApp().mainWindow())
+        content = """
+        * HorizontalStack @smallFormsContainer
+        > * TwoColumnForm @originForm
+        >> : x
+        >> [__] @xOrigin
+        >> : y
+        >> [__] @yOrigin
+        > * TwoColumnForm @sizeForm
+        >> : w
+        >> [__] @width
+        >> : h
+        >> [__] @height
+        * TwoColumnForm @starPropertiesForm
+        > : Points
+        > [__] @points
+        > : Inner radius
+        > [__] % @innerRadius
+        ====================
+        (Cancel) @cancelButton
+        (OK) @okButton
+        """
 
-        self.w.infoText = vanilla.TextBox((10, 13, -10, 22), "Add star:")
-        # add some text boxes (labels)
-        self.w.xText = vanilla.TextBox((10, 43, 100, 22), "x")
-        self.w.yText = vanilla.TextBox((10, 73, 100, 22), "y")
-        self.w.wText = vanilla.TextBox((100, 43, 100, 22), "w")
-        self.w.hText = vanilla.TextBox((100, 73, 100, 22), "h")
-        self.w.pointsText = vanilla.TextBox((10, 103, 100, 22), "Points")
-        self.w.intRadiusText = vanilla.TextBox((10, 133, 100, 22), "Inner radius")
-        self.w.percentLegend = vanilla.TextBox((172, 133, 100, 22), "%")
+        integerInput = dict(
+            valueType="integer",
+            valueWidth=46,
+            valueIncrement=1,
+        )
+        integerInputPositive = integerInput.copy()
+        integerInputPositive.update(dict(
+            minValue=0,
+        ))
 
-        # adding input boxes
-        self.w.xInput = vanilla.EditText((30, 40, 50, 22), "%i" % x)
-        self.w.yInput = vanilla.EditText((30, 70, 50, 22), "%i" % y)
-        self.w.wInput = vanilla.EditText((120, 40, 50, 22))
-        self.w.hInput = vanilla.EditText((120, 70, 50, 22))
-        self.w.pointsInput = vanilla.EditText((120, 100, 50, 22), "5")
-        self.w.intRadiusInput = vanilla.EditText((120, 130, 50, 22), "50")
+        smallForm = dict(
+            titleColumnWidth=10,
+            itemColumnWidth=integerInput["valueWidth"],
+            width="fit",
+        )
 
-        self.w.okButton = vanilla.Button((-70, -30, -15, 20), "OK", callback=self.okCallback, sizeStyle="small")
-        self.w.setDefaultButton(self.w.okButton)
+        descriptionData = dict(
+            originForm = smallForm,
+            sizeForm = smallForm,
+            starPropertiesForm = dict(
+                titleColumnWidth=80,
+                itemColumnWidth=integerInput["valueWidth"] + 20,
+            ),
+            cancelButton = dict(
+                keyEquivalent=chr(27),
+            ),
+            xOrigin = integerInput.copy(),
+            yOrigin = integerInput.copy(),
+            width = integerInputPositive.copy(),
+            height = integerInputPositive.copy(),
+            points = integerInputPositive.copy(),
+            innerRadius = integerInputPositive.copy(),
+        )
 
-        self.w.closeButton = vanilla.Button((-150, -30, -80, 20), "Cancel", callback=self.cancelCallback, sizeStyle="small")
-        self.w.closeButton.bind(".", ["command"])
-        self.w.closeButton.bind(chr(27), [])
+        descriptionData["xOrigin"]["value"] = x
+        descriptionData["yOrigin"]["value"] = y
 
+        self.w = ezui.EZSheet(
+            content=content,
+            descriptionData=descriptionData,
+            parent=parent,
+            controller=self,
+            defaultButton="okButton"
+        )
+
+    def started(self):
         self.w.open()
 
-    def okCallback(self, sender):
+    def okButtonCallback(self, sender):
         # draw the shape in the glyph
         # try to get some integers from the input fields
         try:
-            x = int(self.w.xInput.get())
-            y = int(self.w.yInput.get())
-            w = int(self.w.wInput.get())
-            h = int(self.w.hInput.get())
-            nbPoints = int(self.w.pointsInput.get())
-            innerRadius = int(self.w.intRadiusInput.get())
+            x = int(self.w.getItem("xOrigin").get())
+            y = int(self.w.getItem("yOrigin").get())
+            w = int(self.w.getItem("width").get())
+            h = int(self.w.getItem("height").get())
+            nbPoints = int(self.w.getItem("points").get())
+            innerRadius = int(self.w.getItem("innerRadius").get())
         # if this fails just do nothing and print a tiny traceback
         except Exception:
             print("A number is required!")
@@ -72,8 +112,8 @@ class StarShapesWindow(object):
         # draw the shape with the callback given on init
         self.callback((x, y, w, h), nbPoints, innerRadius, self.glyph)
 
-    def cancelCallback(self, sender):
-        # do nothing :)
+    def cancelButtonCallback(self, sender):
+        # close the window
         self.w.close()
 
 
@@ -81,7 +121,7 @@ def _roundPoint(x, y):
     return int(round(x)), int(round(y))
 
 
-class DrawStarTool(BaseEventTool):
+class StarTool(BaseEventTool):
 
     strokeColor = (1, 0, 0, 1)
     reversedStrokColor = (0, 0, 1, 1)
@@ -98,7 +138,7 @@ class DrawStarTool(BaseEventTool):
         self.nbPoints = 5
         self.innerRadius = 50
 
-        drawingLayer = self.extensionContainer("com.adbac.starTool")
+        drawingLayer = self.extensionContainer("com.adbac.starToolBeta")
         self.pathLayer = drawingLayer.appendPathSublayer(
             fillColor=None,
             strokeColor=self.strokeColor,
@@ -216,10 +256,13 @@ class DrawStarTool(BaseEventTool):
         # on double click, pop up a dialog with input fields
         if clickCount == 2:
             # create and open dialog
-            StarShapesWindow(self.getGlyph(),
-                            callback=self.drawStarWithRectInGlyph,
-                            x=self.minPoint.x,
-                            y=self.minPoint.y)
+            StarShapeSheet(
+                CurrentGlyphWindow(currentFontOnly=True).w,
+                self.getGlyph(),
+                callback=self.drawStarWithRectInGlyph,
+                x=self.minPoint.x,
+                y=self.minPoint.y,
+            )
 
     def mouseDragged(self, point, delta):
         # record the dragging point
@@ -329,8 +372,8 @@ class DrawStarTool(BaseEventTool):
 
     def getToolbarTip(self):
         # return the toolbar tool tip
-        return "Star Tool"
+        return "Star Tool Beta"
 
 
 # install the tool!!
-installTool(DrawStarTool())
+installTool(StarTool())
