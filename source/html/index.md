@@ -1,20 +1,9 @@
-<img src="starToolMechanicIcon.png" alt="drawing" width="64px"/>
+<img src="images/starToolMechanicIcon.png" alt="drawing" width="64px"/>
 
 Star Tool
 ==========
 
 An interactive tool to draw stars with given number of points and inner radius.
-
-**Credits:** This extension is widely based on Frederik Berlaen's [Shape Tool extension](https://github.com/typemytype/shapeToolRoboFontExtension/)
-
-Installation
-------------
-
-Download and double-click the `.roboFontExt` file to install manually, or get it via [Mechanic2](http://robofontmechanic.com/).
-
-When installed, StarTool becomes available from the Glyph Editor’s toolbar.
-
-![](StarTool_glyphEditor.png)
 
 Usage
 -----
@@ -39,4 +28,4 @@ The following actions are supported:
 | ⌘ + click + drag | define the star size from center |
 | double click | show a modal window for nummerical input of position and size |
 
-![StarTool dialog for nummerical input (double-click to open)](StarTool_dialog.png)
+![StarTool dialog for nummerical input (double-click to open)](images/StarTool_dialog.png)
