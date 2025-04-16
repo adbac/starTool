@@ -372,7 +372,7 @@ class StarTool(BaseEventTool):
 
     def getToolbarTip(self):
         # return the toolbar tool tip
-        return "Star Tool Beta"
+        return "Star Tool"
 
 
 # install the tool!!
