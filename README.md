@@ -39,4 +39,4 @@ The following actions are supported:
 | ⌘ + click + drag           | define the star size from center                              |
 | double click               | show a modal window for nummerical input of position and size |
 
-![StarTool dialog for nummerical input (double-click to open)](StarTool_dialog.png)
+![StarTool dialog for numerical input (double-click to open)](docs/images/dialog.png)
