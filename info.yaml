@@ -3,7 +3,7 @@ developer: Adrien Bachelart
 developerURL: https://github.com/adbac
 launchAtStartUp: true
 mainScript: starTool.py
-version: '0.2.2'
+version: '0.2.3'
 addToMenu: []
 html: true
 requiresVersionMajor: '4'

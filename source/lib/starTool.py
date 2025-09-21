@@ -40,8 +40,8 @@ class StarShapeSheet(ezui.WindowController):
         * TwoColumnForm @starPropertiesForm
         > : Points
         > [__] @points
-        > : Inner radius
-        > [__] % @innerRadius
+        > : Inner radius (%)
+        > [__] @innerRadius
         ====================
         (Cancel) @cancelButton
         (OK) @okButton
