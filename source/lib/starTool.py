@@ -64,11 +64,15 @@ class StarShapeSheet(ezui.WindowController):
         )
 
         descriptionData = dict(
-            originForm = smallForm,
-            sizeForm = smallForm,
+            smallFormsContainer=dict(
+                width="fill",
+                distribution="equalSpacing",
+            ),
+            originForm = smallForm.copy(),
+            sizeForm = smallForm.copy(),
             starPropertiesForm = dict(
-                titleColumnWidth=80,
-                itemColumnWidth=integerInput["valueWidth"] + 20,
+                titleColumnWidth=105,
+                itemColumnWidth=integerInput["valueWidth"],
             ),
             cancelButton = dict(
                 keyEquivalent=chr(27),
