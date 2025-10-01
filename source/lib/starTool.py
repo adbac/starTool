@@ -26,6 +26,7 @@ class StarShapeSheet(ezui.WindowController):
         self.callback = callback
 
         content = """
+        !§ Add a star
         * HorizontalStack @smallFormsContainer
         > * TwoColumnForm @originForm
         >> : x
