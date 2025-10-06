@@ -22,7 +22,7 @@ Usage
 - open the Glyph Editor
 - click on the StarTool icon to activate it 
 
-<!-- add a nice simple .gif screencast here -->
+![](docs/images/video.gif)
 
 ### Actions
 
