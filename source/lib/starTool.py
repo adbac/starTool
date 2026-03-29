@@ -7,7 +7,6 @@ from mojo.events import BaseEventTool, installTool
 from mojo.extensions import ExtensionBundle
 from mojo.UI import CurrentGlyphWindow
 
-
 # collecting image data for building cursors and toolbar icons
 
 shapeBundle = ExtensionBundle("StarTool")
@@ -54,9 +53,11 @@ class StarShapeSheet(ezui.WindowController):
             valueIncrement=1,
         )
         integerInputPositive = integerInput.copy()
-        integerInputPositive.update(dict(
-            minValue=0,
-        ))
+        integerInputPositive.update(
+            dict(
+                minValue=0,
+            )
+        )
 
         smallForm = dict(
             titleColumnWidth=10,
@@ -69,21 +70,21 @@ class StarShapeSheet(ezui.WindowController):
                 width="fill",
                 distribution="equalSpacing",
             ),
-            originForm = smallForm.copy(),
-            sizeForm = smallForm.copy(),
-            starPropertiesForm = dict(
+            originForm=smallForm.copy(),
+            sizeForm=smallForm.copy(),
+            starPropertiesForm=dict(
                 titleColumnWidth=105,
                 itemColumnWidth=integerInput["valueWidth"],
             ),
-            cancelButton = dict(
+            cancelButton=dict(
                 keyEquivalent=chr(27),
             ),
-            xOrigin = integerInput.copy(),
-            yOrigin = integerInput.copy(),
-            width = integerInputPositive.copy(),
-            height = integerInputPositive.copy(),
-            points = integerInputPositive.copy(),
-            innerRadius = integerInputPositive.copy(),
+            xOrigin=integerInput.copy(),
+            yOrigin=integerInput.copy(),
+            width=integerInputPositive.copy(),
+            height=integerInputPositive.copy(),
+            points=integerInputPositive.copy(),
+            innerRadius=integerInputPositive.copy(),
         )
 
         descriptionData["xOrigin"]["value"] = x
@@ -94,7 +95,7 @@ class StarShapeSheet(ezui.WindowController):
             descriptionData=descriptionData,
             parent=parent,
             controller=self,
-            defaultButton="okButton"
+            defaultButton="okButton",
         )
 
     def started(self):
@@ -127,7 +128,6 @@ def _roundPoint(x, y):
 
 
 class StarTool(BaseEventTool):
-
     strokeColor = (1, 0, 0, 1)
     reversedStrokColor = (0, 0, 1, 1)
 
@@ -145,9 +145,7 @@ class StarTool(BaseEventTool):
 
         drawingLayer = self.extensionContainer("com.adbac.starToolBeta")
         self.pathLayer = drawingLayer.appendPathSublayer(
-            fillColor=None,
-            strokeColor=self.strokeColor,
-            strokeWidth=-1
+            fillColor=None, strokeColor=self.strokeColor, strokeWidth=-1
         )
         self.originLayer = drawingLayer.appendSymbolSublayer(
             visible=False,
@@ -157,8 +155,8 @@ class StarTool(BaseEventTool):
                 inner=0.1,
                 outer=1,
                 size=(15, 15),
-                fillColor=self.strokeColor
-            )
+                fillColor=self.strokeColor,
+            ),
         )
 
     def getRect(self):
@@ -205,7 +203,12 @@ class StarTool(BaseEventTool):
         if w != h:
             minSide = min(w, h)
             outerRadius = minSide / 2
-            transformation = DecomposedTransform(scaleX = 1 if minSide == w else w / h if h != 0 else w, scaleY = 1 if minSide == h else h / w if w != 0 else h, tCenterX = x + w/2, tCenterY = y + h/2).toTransform()
+            transformation = DecomposedTransform(
+                scaleX=1 if minSide == w else w / h if h != 0 else w,
+                scaleY=1 if minSide == h else h / w if w != 0 else h,
+                tCenterX=x + w / 2,
+                tCenterY=y + h / 2,
+            ).toTransform()
         else:
             transformation = Identity
             outerRadius = w / 2
@@ -221,13 +224,15 @@ class StarTool(BaseEventTool):
         # draw a star in the glyph using the pen
         for i in range(nbPoints):
             angle = 2 * math.pi * i / nbPoints
-            points_x_inner.append(innerRadius * math.cos(angle) + x + w/2)
-            points_y_inner.append(innerRadius * math.sin(angle) + y + h/2)
+            points_x_inner.append(innerRadius * math.cos(angle) + x + w / 2)
+            points_y_inner.append(innerRadius * math.sin(angle) + y + h / 2)
             angle2 = angle + math.pi / nbPoints
-            points_x_outer.append(outerRadius * math.cos(angle2) + x + w/2)
-            points_y_outer.append(outerRadius * math.sin(angle2) + y + h/2)
+            points_x_outer.append(outerRadius * math.cos(angle2) + x + w / 2)
+            points_y_outer.append(outerRadius * math.sin(angle2) + y + h / 2)
 
-        for x_in, y_in, x_out, y_out in zip(points_x_inner, points_y_inner, points_x_outer, points_y_outer):
+        for x_in, y_in, x_out, y_out in zip(
+            points_x_inner, points_y_inner, points_x_outer, points_y_outer
+        ):
             points.append(_roundPoint(*transformation.transformPoint((x_in, y_in))))
             points.append(_roundPoint(*transformation.transformPoint((x_out, y_out))))
 
@@ -283,7 +288,9 @@ class StarTool(BaseEventTool):
     def mouseUp(self, point):
         # mouse up, if you have recorded the rect draw that into the glyph
         if self.minPoint and self.maxPoint:
-            self.drawStarWithRectInGlyph(self.getRect(), self.nbPoints, self.innerRadius, self.getGlyph())
+            self.drawStarWithRectInGlyph(
+                self.getRect(), self.nbPoints, self.innerRadius, self.getGlyph()
+            )
         # reset the tool
         self.minPoint = None
         self.maxPoint = None
@@ -336,7 +343,12 @@ class StarTool(BaseEventTool):
         else:
             self.pathLayer.setStrokeDash([5, 3])
         # record the current size of the shape and store it
-        if self.controlDown and self.moveShapeShift is None and self.minPoint and self.maxPoint:
+        if (
+            self.controlDown
+            and self.moveShapeShift is None
+            and self.minPoint
+            and self.maxPoint
+        ):
             w = self.maxPoint.x - self.minPoint.x
             h = self.maxPoint.y - self.minPoint.y
             self.moveShapeShift = w, h
