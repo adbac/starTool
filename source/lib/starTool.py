@@ -143,7 +143,7 @@ class StarTool(BaseEventTool):
         self.nbPoints = 5
         self.innerRadius = 50
 
-        drawingLayer = self.extensionContainer("com.adbac.starToolBeta")
+        drawingLayer = self.extensionContainer("com.adrienbc.starTool")
         self.pathLayer = drawingLayer.appendPathSublayer(
             fillColor=None, strokeColor=self.strokeColor, strokeWidth=-1
         )
