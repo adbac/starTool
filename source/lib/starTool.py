@@ -1,7 +1,7 @@
 import math
 
 import ezui
-from fontTools.misc.transform import DecomposedTransform
+from fontTools.misc.transform import DecomposedTransform, Identity
 from fontTools.pens.pointPen import ReverseContourPointPen
 from mojo.events import BaseEventTool, installTool
 from mojo.extensions import ExtensionBundle
@@ -200,22 +200,17 @@ class StarTool(BaseEventTool):
 
         x, y, w, h = rect
 
-        baseTransformArgs = dict(
-            tCenterX=x + w / 2,
-            tCenterY=y + h / 2,
-            rotation=(-90 if correctRotation else 0),
-        )
-
         if w != h:
             minSide = min(w, h)
             outerRadius = minSide / 2
             transformation = DecomposedTransform(
-                **baseTransformArgs,
                 scaleX=1 if minSide == w else w / h if h != 0 else w,
                 scaleY=1 if minSide == h else h / w if w != 0 else h,
+                tCenterX=x + w / 2,
+                tCenterY=y + h / 2,
             ).toTransform()
         else:
-            transformation = DecomposedTransform(**baseTransformArgs).toTransform()
+            transformation = Identity
             outerRadius = w / 2
 
         innerRadius = outerRadius * (innerRadius / 100)
@@ -228,7 +223,9 @@ class StarTool(BaseEventTool):
 
         # draw a star in the glyph using the pen
         for i in range(nbPoints):
-            angle = 2 * math.pi * i / nbPoints
+            angle = (
+                -((2 * math.pi) / 4) if correctRotation else 0
+            ) + 2 * math.pi * i / nbPoints
             points_x_inner.append(innerRadius * math.cos(angle) + x + w / 2)
             points_y_inner.append(innerRadius * math.sin(angle) + y + h / 2)
             angle2 = angle + math.pi / nbPoints
@@ -243,7 +240,9 @@ class StarTool(BaseEventTool):
 
         return points
 
-    def drawStarWithRectInGlyph(self, rect, nbPoints, innerRadius, glyph):
+    def drawStarWithRectInGlyph(
+        self, rect, nbPoints, innerRadius, glyph, correctRotation=True
+    ):
         # draw the shape into the glyph
         # tell the glyph something is going to happen (undo is going to be prepared)
         glyph.prepareUndo("Drawing Star")
@@ -254,7 +253,9 @@ class StarTool(BaseEventTool):
         if self.shouldReverse:
             pen = ReverseContourPointPen(pen)
 
-        points = self.getStarPoints(rect, nbPoints, innerRadius)
+        points = self.getStarPoints(
+            rect, nbPoints, innerRadius, correctRotation=correctRotation
+        )
 
         pen.beginPath()
         for p in points:
