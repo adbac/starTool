@@ -1,7 +1,7 @@
 import math
 
 import ezui
-from fontTools.misc.transform import DecomposedTransform, Identity
+from fontTools.misc.transform import DecomposedTransform
 from fontTools.pens.pointPen import ReverseContourPointPen
 from mojo.events import BaseEventTool, installTool
 from mojo.extensions import ExtensionBundle
@@ -195,22 +195,27 @@ class StarTool(BaseEventTool):
 
         return x, y, w, h
 
-    def getStarPoints(self, rect, nbPoints, innerRadius):
+    def getStarPoints(self, rect, nbPoints, innerRadius, correctRotation=True):
         points = []
 
         x, y, w, h = rect
+
+        baseTransformArgs = dict(
+            tCenterX=x + w / 2,
+            tCenterY=y + h / 2,
+            rotation=(-90 if correctRotation else 0),
+        )
 
         if w != h:
             minSide = min(w, h)
             outerRadius = minSide / 2
             transformation = DecomposedTransform(
+                **baseTransformArgs,
                 scaleX=1 if minSide == w else w / h if h != 0 else w,
                 scaleY=1 if minSide == h else h / w if w != 0 else h,
-                tCenterX=x + w / 2,
-                tCenterY=y + h / 2,
             ).toTransform()
         else:
-            transformation = Identity
+            transformation = DecomposedTransform(**baseTransformArgs)
             outerRadius = w / 2
 
         innerRadius = outerRadius * (innerRadius / 100)
