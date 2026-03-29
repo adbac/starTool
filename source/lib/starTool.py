@@ -215,7 +215,7 @@ class StarTool(BaseEventTool):
                 scaleY=1 if minSide == h else h / w if w != 0 else h,
             ).toTransform()
         else:
-            transformation = DecomposedTransform(**baseTransformArgs)
+            transformation = DecomposedTransform(**baseTransformArgs).toTransform()
             outerRadius = w / 2
 
         innerRadius = outerRadius * (innerRadius / 100)
